@@ -213,9 +213,11 @@ final class DjangoUnitTestEngine extends ArcanistBaseUnitTestEngine {
         // run everything relative to project root, so that our paths match up
         // with $this->getPaths()
         chdir($this->getWorkingCopy()->getProjectRoot());
-
+        
+        // coverage enabled ?
+        $this->setEnableCoverage($this->getWorkingCopy()->getConfig(
+            "unit.engine.django.coverage", true));
         $resultsArray = array();
-
         // manage_py_dir should be a relative path to current .arcconfig
         $managepyDir = join("/", [getcwd(), $this->getWorkingCopy()->getConfig(
             "unit.engine.django.manage_py_dir", "")]);
