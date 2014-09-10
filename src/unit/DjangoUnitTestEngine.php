@@ -21,32 +21,6 @@ final class DjangoUnitTestEngine extends ArcanistBaseUnitTestEngine {
             "unit.engine.django.manage_py_args", "");
     }
 
-    private function getManagePyDirs() {
-        $managepyDirs = array();
-
-        // look at all paths, and recursively look for a manage.py, only going
-        // up in directories
-        foreach ($this->getPaths() as $path) {
-            $rootPath = $path;
-
-            do {
-                if(file_exists($rootPath."/manage.py") &&
-                        !in_array($rootPath, $managepyDirs)) {
-                    array_push($managepyDirs, $rootPath);
-                }
-
-                $last = strrchr($rootPath, "/");
-                $rootPath = str_replace($last, "", $rootPath);
-            } while ($last);
-        }
-
-        if(file_exists("./manage.py") && !in_array(".", $managepyDirs)) {
-            array_push($managepyDirs, ".");
-        }
-
-        return $managepyDirs;
-    }
-
     private function getPythonPaths() {
         $pythonPaths = array();
         foreach($this->getPaths() as $path) {
@@ -242,48 +216,41 @@ final class DjangoUnitTestEngine extends ArcanistBaseUnitTestEngine {
 
         $resultsArray = array();
 
-        // find all manage.py files
-        $managepyDirs = $this->getManagePyDirs();
+        // manage_py_dir should be a relative path to current .arcconfig
+        $managepyDir = join("/", [getcwd(), $this->getWorkingCopy()->getConfig(
+            "unit.engine.django.manage_py_dir", "")]);
+        $managepyPath = $managepyDir."/manage.py";
 
-        if(count($managepyDirs) == 0) {
-            throw new ArcanistNoEffectException(
-                "Could not find a manage.py. No tests to run.");
+        $testResults = $this->runDjangoTestSuite($managepyPath);
+        $testLines = $testResults["testLines"];
+        $testExitCode = $testResults["testExitCode"];
+        $results = $testResults["results"];
+
+        // if we have not found any tests in the output, but the exit code
+        // wasn't 0, the entire test suite has failed to run, since it ran
+        // no tests
+        if(count($results) == 0 && $testExitCode != 0) {
+            // name the test "Failed to run tests: " followed by the path
+            // of the manage.py file
+            $failTestName = "Failed to run: ".$managepyPath;
+            $result = new ArcanistUnitTestResult();
+            $result->setName($failTestName);
+            $result->setResult(ArcanistUnitTestResult::RESULT_FAIL);
+            // set the UserData to the raw output of the failed test run
+            $result->setUserData(join("\n", $testLines));
+
+            // add to final results array
+            $resultsArray[$failTestName] = $result;
+            // skip coverage as there is none
+            continue;
         }
 
-        // each manage.py found is a django project to test
-        foreach ($managepyDirs as $managepyDir) {
-            $managepyPath = $managepyDir."/manage.py";
-
-            $testResults = $this->runDjangoTestSuite($managepyPath);
-            $testLines = $testResults["testLines"];
-            $testExitCode = $testResults["testExitCode"];
-            $results = $testResults["results"];
-
-            // if we have not found any tests in the output, but the exit code
-            // wasn't 0, the entire test suite has failed to run, since it ran
-            // no tests
-            if(count($results) == 0 && $testExitCode != 0) {
-                // name the test "Failed to run tests: " followed by the path
-                // of the manage.py file
-                $failTestName = "Failed to run: ".$managepyPath;
-                $result = new ArcanistUnitTestResult();
-                $result->setName($failTestName);
-                $result->setResult(ArcanistUnitTestResult::RESULT_FAIL);
-                // set the UserData to the raw output of the failed test run
-                $result->setUserData(join("\n", $testLines));
-
-                // add to final results array
-                $resultsArray[$failTestName] = $result;
-                // skip coverage as there is none
-                continue;
-            }
-
-            if($this->getEnableCoverage()) {
-                $this->processCoverageResults($results);
-            }
-
-            $resultsArray = array_merge($resultsArray, $results);
+        if($this->getEnableCoverage()) {
+            $this->processCoverageResults($results);
         }
+
+        $resultsArray = array_merge($resultsArray, $results);
+        
 
         return $resultsArray;
     }
