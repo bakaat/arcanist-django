@@ -8,16 +8,20 @@ const LINEBREAK =
 
 
 final class DjangoUnitTestEngine extends ArcanistBaseUnitTestEngine {
+    public function getConfig($key, $default){
+        return $this->getConfigurationManager()->getConfigFromAnySource(
+            $key,
+            $default
+        );
+    }
     private function getAppNames() {
-        $working_copy = $this->getWorkingCopy();
-        return $working_copy->getConfig("unit.engine.django.test_apps", "");
+        return $this->getConfig("unit.engine.django.test_apps", "");
     }
 
     // allow users to specify any additional args to put onto the end of
     // "manage.py test"
     private function getAdditionalManageArgs() {
-        $working_copy = $this->getWorkingCopy();
-        return $working_copy->getConfig(
+        return $this->getConfig(
             "unit.engine.django.manage_py_args", "");
     }
 
@@ -215,11 +219,11 @@ final class DjangoUnitTestEngine extends ArcanistBaseUnitTestEngine {
         chdir($this->getWorkingCopy()->getProjectRoot());
         
         // coverage enabled ?
-        $this->setEnableCoverage($this->getWorkingCopy()->getConfig(
+        $this->setEnableCoverage($this->getConfig(
             "unit.engine.django.coverage", true));
         $resultsArray = array();
         // manage_py_dir should be a relative path to current .arcconfig
-        $managepyDir = join("/", [getcwd(), $this->getWorkingCopy()->getConfig(
+        $managepyDir = join("/", [getcwd(), $this->getConfig(
             "unit.engine.django.manage_py_dir", "")]);
         $managepyPath = $managepyDir."/manage.py";
 
