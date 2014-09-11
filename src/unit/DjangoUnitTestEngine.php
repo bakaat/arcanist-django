@@ -7,7 +7,7 @@ const LINEBREAK =
 "----------------------------------------------------------------------";
 
 
-final class DjangoUnitTestEngine extends ArcanistBaseUnitTestEngine {
+final class DjangoUnitTestEngine extends ArcanistUnitTestEngine {
     public function getConfig($key, $default){
         return $this->getConfigurationManager()->getConfigFromAnySource(
             $key,
