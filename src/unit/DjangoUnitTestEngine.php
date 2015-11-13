@@ -217,7 +217,7 @@ final class DjangoUnitTestEngine extends ArcanistUnitTestEngine {
         // run everything relative to project root, so that our paths match up
         // with $this->getPaths()
         chdir($this->getWorkingCopy()->getProjectRoot());
-        
+
         // coverage enabled ?
         $this->setEnableCoverage($this->getConfig(
             "unit.engine.django.coverage", true));
@@ -247,16 +247,13 @@ final class DjangoUnitTestEngine extends ArcanistUnitTestEngine {
 
             // add to final results array
             $resultsArray[$failTestName] = $result;
-            // skip coverage as there is none
-            continue;
-        }
-
-        if($this->getEnableCoverage()) {
+        } else if($this->getEnableCoverage()) {
+            // continue with coverage
             $this->processCoverageResults($results);
         }
 
         $resultsArray = array_merge($resultsArray, $results);
-        
+
 
         return $resultsArray;
     }
